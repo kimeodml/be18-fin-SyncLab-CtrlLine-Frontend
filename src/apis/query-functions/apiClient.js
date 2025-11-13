@@ -1,5 +1,7 @@
 import axios from 'axios';
+import { toast } from 'vue-sonner';
 
+import router from '@/routers';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 const apiClient = axios.create({
@@ -11,13 +13,14 @@ const apiClient = axios.create({
 console.log(import.meta.env.VITE_API_BASE_URL);
 
 // 요청 인터셉터
-axios.interceptors.request.use(
+apiClient.interceptors.request.use(
   config => {
     const authStore = useAuthStore();
 
     if (authStore.accessToken) {
       config.headers.Authorization = `Bearer ${authStore.accessToken}`;
-      console.log('20', authStore.accessToken);
+
+      console.log('accessToken', authStore.accessToken);
     }
     return config;
   },
@@ -27,21 +30,36 @@ axios.interceptors.request.use(
 );
 
 // 응답 인터셉터
-axios.interceptors.response.use(
+apiClient.interceptors.response.use(
   response => {
-    const authStore = useAuthStore();
-    const authHeader = response.headers['authorization'];
-    if (authHeader?.startWidth('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-
-      authStore.setToken(token);
-    }
     return response;
   },
-  error => {
-    if (error.response?.stats === 401 && !error.config._retry) {
+  async error => {
+    const authStore = useAuthStore();
+
+    if (error.response?.status === 401 && !error.config._retry) {
       error.config._retry = true;
-      // refresh_token 으로 access_token 재발급
+
+      try {
+        const response = await apiClient.post('/auth/token/refresh');
+        const newToken = response.headers['authorization']?.split(' ')[1];
+
+        if (newToken) {
+          authStore.setToken(newToken);
+          error.config.headers['Authorization'] = `Bearer ${newToken}`;
+          console.log('newToken', newToken);
+          return apiClient(error.config);
+        }
+      } catch (refreshError) {
+        if (refreshError.response.data.code === 'INVALID_REFRESH_TOKEN') {
+          toast.error('로그인 세션이 만료되었습니다. 다시 로그인 해주세요.');
+        }
+
+        authStore.clearAuth();
+        await router.push('/login');
+
+        return Promise.reject(refreshError);
+      }
     }
     return Promise.reject(error);
   },
