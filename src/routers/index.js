@@ -31,7 +31,6 @@ const routes = [
     name: 'BaseManagement',
     meta: { requiresAuth: true },
     children: [
-      // 등록 경로 추가 필요
       {
         path: 'users',
         name: 'UserList',
@@ -108,7 +107,19 @@ const routes = [
         path: 'production-plans',
         name: 'ProductionPlanList',
         component: () =>
-          import('@/pages/production-management/product-plan/ProductionPlanList.vue'),
+          import('@/pages/production-management/production-plan/ProductionPlanList.vue'),
+      },
+      {
+        path: 'production-plans/:productionPlanId',
+        name: 'ProductionPlanDetail',
+        component: () =>
+          import('@/pages/production-management/production-plan/ProductionPlanDetail.vue'),
+      },
+      {
+        path: 'production-plans/new',
+        name: 'CreateProductionPlan',
+        component: () =>
+          import('@/pages/production-management/production-plan/CreateProductionPlan.vue'),
       },
       {
         path: 'production-performances',
