@@ -1,11 +1,30 @@
-import { fileURLToPath, URL } from 'url'
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+// eslint-disable-next-line import-x/no-unresolved
+import path from 'node:path';
+
+import tailwindcss from '@tailwindcss/vite';
+import vue from '@vitejs/plugin-vue';
+import { defineConfig, loadEnv } from 'vite';
+import svgLoader from 'vite-svg-loader';
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [vue()],
-  alias: {
-    '@': fileURLToPath(new URL('./src', import.meta.url))
-  }
-})
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd());
+
+  return {
+    plugins: [vue(), tailwindcss(), svgLoader()],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
+    },
+    server: {
+      proxy: {
+        '/api': {
+          target: env.VITE_API_BASE_URL,
+          changeOrigin: true,
+          rewrite: path => path.replace(/^\/api/, ''),
+        },
+      },
+    },
+  };
+});
