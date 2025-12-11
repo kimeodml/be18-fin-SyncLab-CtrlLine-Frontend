@@ -9,18 +9,12 @@
 
       <AccordionContent class="p-4 border-b-2 border-t-2 my-3">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FilterInput label="라인명" v-model="localFilters.lineName" />
+          <FilterSelect label="라인명" v-model="localFilters.lineCode" :options="lineOptions" />
           <FilterInput label="담당자" v-model="localFilters.userName" />
           <FilterSelect
             label="담당부서"
             v-model="localFilters.userDepartment"
-            :options="[
-              { value: null, label: '전체' },
-              { value: '영업 1팀', label: '영업 1팀' },
-              { value: '영업 2팀', label: '영업 2팀' },
-              { value: '생산 1팀', label: '생산 1팀' },
-              { value: '생산 2팀', label: '생산 2팀' },
-            ]"
+            :options="departmentOptions"
           />
         </div>
 
@@ -47,8 +41,9 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue';
+import { computed, reactive, watch } from 'vue';
 
+import useGetLineList from '@/apis/query-hooks/line/useGetLineList';
 import FilterInput from '@/components/filter/FilterInput.vue';
 import FilterSelect from '@/components/filter/FilterSelect.vue';
 import {
@@ -58,6 +53,31 @@ import {
   AccordionContent,
 } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
+import { DEPARTMENT_LABELS } from '@/constants/enumLabels';
+
+const { data: lineList } = useGetLineList();
+
+const lineOptions = computed(() => {
+  if (!lineList.value || !lineList.value.content) {
+    return [{ value: null, label: '전체' }];
+  }
+
+  const entries = lineList.value.content;
+  const relevantLines = entries;
+  const uniqueLines = new Map();
+  for (const line of relevantLines) {
+    if (!uniqueLines.has(line.lineCode)) {
+      uniqueLines.set(line.lineCode, line);
+    }
+  }
+
+  const options = Array.from(uniqueLines.values()).map(line => ({
+    value: line.lineCode,
+    label: `${line.lineName} (${line.lineCode})`,
+  }));
+
+  return [{ value: null, label: '전체' }, ...options];
+});
 
 const props = defineProps({
   filters: { type: Object, required: true },
@@ -65,9 +85,21 @@ const props = defineProps({
 
 const emit = defineEmits(['search']);
 const localFilters = reactive({
+  lineCode: props.filters.lineCode ?? '',
   lineName: props.filters.lineName ?? '',
   userName: props.filters.userName ?? '',
   userDepartment: props.filters.userDepartment ?? null,
+});
+
+const departmentOptions = computed(() => {
+  const options = Object.entries(DEPARTMENT_LABELS).map(([value, label]) => ({
+    value,
+    label,
+  }));
+
+  options.unshift({ value: null, label: '전체' });
+
+  return options;
 });
 
 watch(
@@ -84,6 +116,7 @@ const applyFilters = () => {
 
 const resetFilters = () => {
   Object.assign(localFilters, {
+    lineCode: '',
     lineName: '',
     userName: '',
     userDepartment: null,

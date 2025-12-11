@@ -3,7 +3,7 @@
     <h3 class="scroll-m-20 text-2xl font-semibold tracking-tight">생산계획 등록</h3>
     <div class="flex gap-3">
       <div class="flex gap-2 items-center" v-if="isAdmin">
-        <label class="flex gap-1 items-center text-sm font-medium">
+        <Label class="flex gap-1 items-center text-sm font-medium">
           우선작업
           <TooltipProvider>
             <Tooltip>
@@ -13,7 +13,7 @@
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        </label>
+        </Label>
         <FormField name="isEmergent" v-slot="{ value, setValue }">
           <Switch :modelValue="value" @update:modelValue="setValue" />
         </FormField>
@@ -88,7 +88,12 @@
                   :value="value"
                   :setValue="setValue"
                   :fetchList="
-                    () => useGetUserList({ userStatus: 'ACTIVE', userDepartment: '생산' })
+                    () =>
+                      useGetUserList({
+                        userStatus: 'ACTIVE',
+                        userDepartment: '생산',
+                        userRole: ['ADMIN', 'MANAGER'],
+                      })
                   "
                   keyField="empNo"
                   nameField="userName"
@@ -173,7 +178,12 @@
                   :value="value"
                   :setValue="setValue"
                   :fetchList="
-                    () => useGetUserList({ userStatus: 'ACTIVE', userDepartment: '영업' })
+                    () =>
+                      useGetUserList({
+                        userStatus: 'ACTIVE',
+                        userDepartment: '영업',
+                        userRole: ['ADMIN', 'MANAGER'],
+                      })
                   "
                   keyField="empNo"
                   nameField="userName"
@@ -296,6 +306,7 @@
         :draftEndTime="form.values.endTime"
         :draftItem="itemDetail"
         :draftQty="form.values.plannedQty"
+        :isEmergent="form.values.isEmergent"
         mode="create"
       />
     </form>
@@ -321,6 +332,7 @@ import CreateAutoCompleteSelect from '@/components/auto-complete/CreateAutoCompl
 import { Button } from '@/components/ui/button';
 import { FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -454,9 +466,8 @@ watch(
     let startDate = new Date(timeToUse);
     const now = new Date();
 
-    // 시작 시간이 현재 시간보다 과거거나 같으면 30분 추가
     if (startDate <= now) {
-      startDate.setMinutes(startDate.getMinutes() + 30);
+      startDate.setMinutes(startDate.getMinutes() + (isAdmin ? 10 : 30));
       timeToUse = startDate.toISOString();
     }
 
@@ -481,8 +492,6 @@ watch([() => form.values.startTime, () => form.values.plannedQty], ([startTime, 
   const formattedStartTime = formatDate(startTime, 'local-datetime');
 
   if (!startTime || !plannedQty || !lineDetail.value?.lineCode || !formattedStartTime) return;
-
-  console.log(formattedStartTime);
 
   debouncedUpdateEndTime({
     startTime: formattedStartTime,
